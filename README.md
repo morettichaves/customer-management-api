@@ -2,13 +2,19 @@
 
 A REST API for customer management built with **Python, FastAPI, and MySQL**.
 
-This project demonstrates the implementation of a complete CRUD system with database integration, data validation, environment variables, and interactive API documentation.
+This project demonstrates a complete CRUD system with database integration, data validation, environment variables, error handling, and interactive API documentation.
+
+## API Preview
+
+The API includes interactive Swagger documentation generated automatically by FastAPI.
+
+![Customer Management API - Swagger](screenshots/swagger-api.png)
 
 ## Features
 
 - Create customers
 - List all customers
-- Find a customer by ID
+- Find customers by ID
 - Update customer information
 - Delete customers
 - MySQL database integration
@@ -34,20 +40,23 @@ This project demonstrates the implementation of a complete CRUD system with data
 ```text
 customer-management-api/
 │
+├── screenshots/
+│   └── swagger-api.png
+│
 ├── app.py
 ├── requirements.txt
 ├── README.md
 ├── .gitignore
-└── .env              # Local only - not uploaded to GitHub
+└── .env              # Local only - never committed
 ```
 
 ## API Endpoints
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/` | API status |
+|---|---|---|
+| GET | `/` | Check API status |
 | GET | `/clientes` | List all customers |
-| GET | `/clientes/{cliente_id}` | Find customer by ID |
+| GET | `/clientes/{cliente_id}` | Find a customer by ID |
 | POST | `/clientes` | Create a new customer |
 | PUT | `/clientes/{cliente_id}` | Update a customer |
 | DELETE | `/clientes/{cliente_id}` | Delete a customer |
@@ -112,7 +121,7 @@ pip install -r requirements.txt
 
 ## Database Configuration
 
-Create a MySQL database:
+Create the MySQL database:
 
 ```sql
 CREATE DATABASE customer_management;
@@ -146,7 +155,9 @@ DB_PASSWORD=your_mysql_password
 DB_NAME=customer_management
 ```
 
-The `.env` file is ignored by Git and should never be committed to the repository.
+The `.env` file contains database credentials and must never be committed to a public repository.
+
+It is already protected by `.gitignore`.
 
 ## Running the API
 
@@ -156,40 +167,40 @@ Start the development server:
 uvicorn app:app --reload
 ```
 
-The API will be available locally at:
+The API will be available at:
 
 `http://127.0.0.1:8000`
 
-Interactive Swagger documentation:
+Swagger documentation:
 
 `http://127.0.0.1:8000/docs`
 
 ## CRUD Operations
 
-The API implements the four basic CRUD operations:
+The API implements the four fundamental CRUD operations:
 
-**Create** → POST  
-**Read** → GET  
-**Update** → PUT  
-**Delete** → DELETE
+- **Create** → POST
+- **Read** → GET
+- **Update** → PUT
+- **Delete** → DELETE
 
-All customer information is stored persistently in a MySQL database.
+Customer data is stored persistently in a MySQL database.
 
 ## Security
 
-Database credentials are stored using environment variables and are not included in the source code.
+Database credentials are stored using environment variables instead of being hardcoded in the application.
 
-The `.env` file is protected through `.gitignore`.
+The `.env` file is excluded from version control through `.gitignore`.
 
 ## Future Improvements
 
-- Email validation
+- Email format validation
 - Duplicate email prevention
-- Authentication
+- Authentication and authorization
 - Pagination
 - Automated tests
 - Docker support
-- Deployment to a cloud platform
+- Cloud deployment
 
 ## Author
 
