@@ -1,141 +1,70 @@
 # Customer Management API
 
-A REST API for customer management built with **Python, FastAPI, and MySQL**.
+[![Quality](https://github.com/morettichaves/customer-management-api/actions/workflows/quality.yml/badge.svg)](https://github.com/morettichaves/customer-management-api/actions/workflows/quality.yml)
 
-This project demonstrates a complete CRUD system with database integration, data validation, environment variables, error handling, and interactive API documentation.
+API REST para gerenciamento de clientes construída com **Python, FastAPI e MySQL**.
 
-## API Preview
+O projeto demonstra operações CRUD, integração com banco de dados, validação de entrada, tratamento de erros, testes automatizados e integração contínua.
 
-The API includes interactive Swagger documentation generated automatically by FastAPI.
+## Demonstração
+
+A documentação interativa é gerada automaticamente pelo FastAPI com Swagger UI.
 
 ![Customer Management API - Swagger](screenshots/swagger-api.png)
 
-## Features
+## Funcionalidades
 
-- Create customers
-- List all customers
-- Find customers by ID
-- Update customer information
-- Delete customers
-- MySQL database integration
-- Data validation with Pydantic
-- Environment variables for database credentials
-- Interactive API documentation with Swagger UI
-- HTTP 404 handling for customers not found
+- Criar, listar, consultar, atualizar e excluir clientes
+- Persistência de dados com MySQL
+- Validação de nome, e-mail e idade com Pydantic
+- Credenciais protegidas por variáveis de ambiente
+- Consultas SQL parametrizadas
+- Respostas HTTP 404 e 422 para erros conhecidos
+- Testes automatizados com cobertura mínima de 80%
+- Lint e testes executados no GitHub Actions
 
-## Technologies
+## Tecnologias
 
-- Python
+- Python 3.12
 - FastAPI
-- MySQL
 - MySQL Connector/Python
 - Pydantic
-- Uvicorn
-- python-dotenv
-- Git
-- GitHub
+- Pytest e pytest-cov
+- Ruff
+- GitHub Actions
 
-## Project Structure
+## Endpoints
 
-```text
-customer-management-api/
-│
-├── screenshots/
-│   └── swagger-api.png
-│
-├── app.py
-├── requirements.txt
-├── README.md
-├── .gitignore
-└── .env              # Local only - never committed
-```
-
-## API Endpoints
-
-| Method | Endpoint | Description |
+| Método | Endpoint | Descrição |
 |---|---|---|
-| GET | `/` | Check API status |
-| GET | `/clientes` | List all customers |
-| GET | `/clientes/{cliente_id}` | Find a customer by ID |
-| POST | `/clientes` | Create a new customer |
-| PUT | `/clientes/{cliente_id}` | Update a customer |
-| DELETE | `/clientes/{cliente_id}` | Delete a customer |
+| GET | `/` | Verifica o estado da API |
+| GET | `/clientes` | Lista todos os clientes |
+| GET | `/clientes/{cliente_id}` | Busca um cliente |
+| POST | `/clientes` | Cria um cliente |
+| PUT | `/clientes/{cliente_id}` | Atualiza um cliente |
+| DELETE | `/clientes/{cliente_id}` | Exclui um cliente |
 
-## Example Customer
-
-```json
-{
-  "nome": "John Doe",
-  "email": "john@example.com",
-  "idade": 30
-}
-```
-
-## Example Response
-
-```json
-{
-  "message": "Cliente cadastrado com sucesso!",
-  "id": 1,
-  "cliente": {
-    "nome": "John Doe",
-    "email": "john@example.com",
-    "idade": 30
-  }
-}
-```
-
-## Installation
-
-### 1. Clone the repository
+## Instalação
 
 ```bash
 git clone https://github.com/morettichaves/customer-management-api.git
-```
-
-Enter the project directory:
-
-```bash
 cd customer-management-api
-```
-
-### 2. Create a virtual environment
-
-```bash
 python -m venv .venv
 ```
 
-### 3. Activate the virtual environment
-
-Windows PowerShell:
+No Windows PowerShell:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
-```
-
-### 4. Install dependencies
-
-```bash
 pip install -r requirements.txt
 ```
 
-## Database Configuration
-
-Create the MySQL database:
+## Banco de dados
 
 ```sql
 CREATE DATABASE customer_management;
-```
-
-Select the database:
-
-```sql
 USE customer_management;
-```
 
-Create the customers table:
-
-```sql
 CREATE TABLE clientes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
@@ -144,68 +73,62 @@ CREATE TABLE clientes (
 );
 ```
 
-## Environment Variables
-
-Create a `.env` file in the project root:
+Crie um arquivo `.env` na raiz:
 
 ```env
 DB_HOST=localhost
 DB_USER=root
-DB_PASSWORD=your_mysql_password
+DB_PASSWORD=sua_senha
 DB_NAME=customer_management
 ```
 
-The `.env` file contains database credentials and must never be committed to a public repository.
+O arquivo `.env` está protegido pelo `.gitignore` e não deve ser enviado ao GitHub.
 
-It is already protected by `.gitignore`.
-
-## Running the API
-
-Start the development server:
+## Executando a API
 
 ```bash
 uvicorn app:app --reload
 ```
 
-The API will be available at:
+- API: `http://127.0.0.1:8000`
+- Swagger: `http://127.0.0.1:8000/docs`
 
-`http://127.0.0.1:8000`
+## Qualidade e testes
 
-Swagger documentation:
+Instale as dependências de desenvolvimento:
 
-`http://127.0.0.1:8000/docs`
+```bash
+pip install -r requirements-dev.txt
+```
 
-## CRUD Operations
+Execute:
 
-The API implements the four fundamental CRUD operations:
+```bash
+ruff check .
+pytest
+```
 
-- **Create** → POST
-- **Read** → GET
-- **Update** → PUT
-- **Delete** → DELETE
+Cada Pull Request executa automaticamente lint, testes e geração do relatório de cobertura.
 
-Customer data is stored persistently in a MySQL database.
+## Estrutura
 
-## Security
+```text
+customer-management-api/
+├── .github/workflows/quality.yml
+├── screenshots/
+├── tests/
+│   └── test_app.py
+├── AGENTS.md
+├── app.py
+├── pyproject.toml
+├── requirements.txt
+├── requirements-dev.txt
+└── README.md
+```
 
-Database credentials are stored using environment variables instead of being hardcoded in the application.
+## Autor
 
-The `.env` file is excluded from version control through `.gitignore`.
+**Otávio Moretti** — Desenvolvedor Back-End Júnior
 
-## Future Improvements
-
-- Email format validation
-- Duplicate email prevention
-- Authentication and authorization
-- Pagination
-- Automated tests
-- Docker support
-- Cloud deployment
-
-## Author
-
-**Otavio Moretti**
-
-Junior Back-End Developer
-
-GitHub: [morettichaves](https://github.com/morettichaves)
+- [GitHub](https://github.com/morettichaves)
+- [LinkedIn](https://www.linkedin.com/in/otavio-moretti)

@@ -1,18 +1,34 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from dotenv import load_dotenv
-import mysql.connector
 import os
+
+import mysql.connector
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException, status
+from pydantic import BaseModel, Field, field_validator
 
 load_dotenv()
 
-app = FastAPI()
+app = FastAPI(
+    title="Customer Management API",
+    description="API REST para gerenciamento de clientes.",
+    version="1.1.0",
+)
 
 
 class Cliente(BaseModel):
-    nome: str
-    email: str
-    idade: int
+    nome: str = Field(min_length=2, max_length=100)
+    email: str = Field(min_length=5, max_length=150)
+    idade: int = Field(ge=0, le=130)
+
+    @field_validator("email")
+    @classmethod
+    def validar_email(cls, valor: str) -> str:
+        email = valor.strip().lower()
+        dominio = email.rsplit("@", maxsplit=1)[-1]
+
+        if "@" not in email or "." not in dominio:
+            raise ValueError("Informe um e-mail válido")
+
+        return email
 
 
 def conectar_banco():
@@ -20,7 +36,7 @@ def conectar_banco():
         host=os.getenv("DB_HOST"),
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME")
+        database=os.getenv("DB_NAME"),
     )
 
 
@@ -34,13 +50,12 @@ def listar_clientes():
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
 
-    cursor.execute("SELECT * FROM clientes")
-    clientes = cursor.fetchall()
-
-    cursor.close()
-    conexao.close()
-
-    return clientes
+    try:
+        cursor.execute("SELECT * FROM clientes")
+        return cursor.fetchall()
+    finally:
+        cursor.close()
+        conexao.close()
 
 
 @app.get("/clientes/{cliente_id}")
@@ -48,53 +63,39 @@ def buscar_cliente(cliente_id: int):
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
 
-    cursor.execute(
-        "SELECT * FROM clientes WHERE id = %s",
-        (cliente_id,)
-    )
-
-    cliente = cursor.fetchone()
-
-    cursor.close()
-    conexao.close()
+    try:
+        cursor.execute("SELECT * FROM clientes WHERE id = %s", (cliente_id,))
+        cliente = cursor.fetchone()
+    finally:
+        cursor.close()
+        conexao.close()
 
     if cliente is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Cliente não encontrado"
-        )
+        raise HTTPException(status_code=404, detail="Cliente não encontrado")
 
     return cliente
 
 
-@app.post("/clientes")
+@app.post("/clientes", status_code=status.HTTP_201_CREATED)
 def cadastrar_cliente(cliente: Cliente):
     conexao = conectar_banco()
     cursor = conexao.cursor()
 
-    sql = """
-    INSERT INTO clientes (nome, email, idade)
-    VALUES (%s, %s, %s)
-    """
-
-    valores = (
-        cliente.nome,
-        cliente.email,
-        cliente.idade
-    )
-
-    cursor.execute(sql, valores)
-    conexao.commit()
-
-    novo_id = cursor.lastrowid
-
-    cursor.close()
-    conexao.close()
+    try:
+        cursor.execute(
+            "INSERT INTO clientes (nome, email, idade) VALUES (%s, %s, %s)",
+            (cliente.nome, cliente.email, cliente.idade),
+        )
+        conexao.commit()
+        novo_id = cursor.lastrowid
+    finally:
+        cursor.close()
+        conexao.close()
 
     return {
         "message": "Cliente cadastrado com sucesso!",
         "id": novo_id,
-        "cliente": cliente
+        "cliente": cliente,
     }
 
 
@@ -103,71 +104,38 @@ def atualizar_cliente(cliente_id: int, cliente: Cliente):
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
 
-    # Primeiro verifica se o cliente existe
-    cursor.execute(
-        "SELECT * FROM clientes WHERE id = %s",
-        (cliente_id,)
-    )
+    try:
+        cursor.execute("SELECT * FROM clientes WHERE id = %s", (cliente_id,))
 
-    cliente_existente = cursor.fetchone()
+        if cursor.fetchone() is None:
+            raise HTTPException(status_code=404, detail="Cliente não encontrado")
 
-    if cliente_existente is None:
+        cursor.execute(
+            "UPDATE clientes SET nome = %s, email = %s, idade = %s WHERE id = %s",
+            (cliente.nome, cliente.email, cliente.idade, cliente_id),
+        )
+        conexao.commit()
+    finally:
         cursor.close()
         conexao.close()
 
-        raise HTTPException(
-            status_code=404,
-            detail="Cliente não encontrado"
-        )
+    return {"message": "Cliente atualizado com sucesso!", "id": cliente_id}
 
-    # Atualiza os dados
-    sql = """
-    UPDATE clientes
-    SET nome = %s, email = %s, idade = %s
-    WHERE id = %s
-    """
-
-    valores = (
-        cliente.nome,
-        cliente.email,
-        cliente.idade,
-        cliente_id
-    )
-
-    cursor.execute(sql, valores)
-    conexao.commit()
-
-    cursor.close()
-    conexao.close()
-
-    return {
-        "message": "Cliente atualizado com sucesso!",
-        "id": cliente_id
-    }
 
 @app.delete("/clientes/{cliente_id}")
 def excluir_cliente(cliente_id: int):
     conexao = conectar_banco()
     cursor = conexao.cursor()
 
-    cursor.execute(
-        "DELETE FROM clientes WHERE id = %s",
-        (cliente_id,)
-    )
-
-    conexao.commit()
-
-    linhas_afetadas = cursor.rowcount
-
-    cursor.close()
-    conexao.close()
+    try:
+        cursor.execute("DELETE FROM clientes WHERE id = %s", (cliente_id,))
+        conexao.commit()
+        linhas_afetadas = cursor.rowcount
+    finally:
+        cursor.close()
+        conexao.close()
 
     if linhas_afetadas == 0:
-        raise HTTPException(
-            status_code=404,
-            detail="Cliente não encontrado"
-        )
+        raise HTTPException(status_code=404, detail="Cliente não encontrado")
 
-    return {
-        "message": "Cliente excluído com sucesso!"
-    }
+    return {"message": "Cliente excluído com sucesso!"}
