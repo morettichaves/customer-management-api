@@ -1,9 +1,10 @@
 import os
+from typing import Annotated
 
 import mysql.connector
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, status
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, StringConstraints, field_validator
 
 load_dotenv()
 
@@ -15,20 +16,14 @@ app = FastAPI(
 
 
 class Cliente(BaseModel):
-    nome: str = Field(min_length=2, max_length=100)
-    email: str = Field(min_length=5, max_length=150)
+    nome: Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=100)]
+    email: EmailStr = Field(max_length=150)
     idade: int = Field(ge=0, le=130)
 
     @field_validator("email")
     @classmethod
-    def validar_email(cls, valor: str) -> str:
-        email = valor.strip().lower()
-        dominio = email.rsplit("@", maxsplit=1)[-1]
-
-        if "@" not in email or "." not in dominio:
-            raise ValueError("Informe um e-mail válido")
-
-        return email
+    def normalizar_email(cls, valor: str) -> str:
+        return valor.lower()
 
 
 def conectar_banco():

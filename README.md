@@ -23,6 +23,15 @@ A documentação interativa é gerada automaticamente pelo FastAPI com Swagger U
 - Testes automatizados com cobertura mínima de 80%
 - Lint e testes executados no GitHub Actions
 
+### Regras de entrada
+
+- O nome é normalizado removendo espaços das extremidades e deve ter entre 2 e 100 caracteres depois disso. Nomes vazios ou compostos apenas de espaços são rejeitados.
+- O e-mail usa `EmailStr` do Pydantic com `email-validator`, possui limite de 150 caracteres e é armazenado em minúsculas. A validação é de formato, não confirma a existência ou a propriedade da caixa de e-mail.
+- A idade deve estar entre 0 e 130.
+- Entradas inválidas retornam HTTP 422 antes de acessar o banco, tanto na criação quanto na atualização.
+
+`email-validator` é instalado junto com as dependências de `requirements.txt`. Referência: [EmailStr na documentação do Pydantic](https://docs.pydantic.dev/latest/api/networks/#pydantic.networks.EmailStr).
+
 ## Tecnologias
 
 - Python 3.12
