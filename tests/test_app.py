@@ -71,6 +71,54 @@ def test_cliente_invalido_retorna_422():
     assert response.status_code == 422
 
 
+@pytest.mark.parametrize("metodo,rota", [("post", "/clientes"), ("put", "/clientes/1")])
+@pytest.mark.parametrize(
+    "campo,valor",
+    [
+        ("nome", "  "),
+        ("nome", "\t\n"),
+        ("nome", " A "),
+        ("nome", "A" * 101),
+        ("nome", None),
+        ("email", "@example.com"),
+        ("email", "ana@@example.com"),
+        ("email", "ana lima@example.com"),
+        ("email", "ana@example..com"),
+        ("email", "ana@.com"),
+        ("email", "a" * 64 + "@" + "b" * 63 + "." + "c" * 20 + ".com"),
+    ],
+)
+def test_entrada_invalida_nao_acessa_banco(monkeypatch, metodo, rota, campo, valor):
+    def banco_nao_deve_ser_acessado():
+        pytest.fail("Entrada inválida não deve abrir conexão com o banco")
+
+    monkeypatch.setattr(app_module, "conectar_banco", banco_nao_deve_ser_acessado)
+    dados = {"nome": "Ana Lima", "email": "ana@example.com", "idade": 28}
+    dados[campo] = valor
+
+    response = getattr(client, metodo)(rota, json=dados)
+
+    assert response.status_code == 422
+    assert any(erro["loc"][-1] == campo for erro in response.json()["detail"])
+
+
+@pytest.mark.parametrize("metodo,rota", [("post", "/clientes"), ("put", "/clientes/1")])
+def test_persiste_nome_e_email_normalizados(fake_database, metodo, rota):
+    cursor, connection = fake_database
+    cursor.one = {"id": 1}
+
+    response = getattr(client, metodo)(
+        rota,
+        json={"nome": "  Ana Lima  ", "email": " ANA+FESTA@EXAMPLE.COM ", "idade": 28},
+    )
+
+    assert response.status_code == (201 if metodo == "post" else 200)
+    assert cursor.statements[-1][1][:3] == ("Ana Lima", "ana+festa@example.com", 28)
+    assert connection.committed
+    assert cursor.closed
+    assert connection.closed
+
+
 def test_busca_de_cliente_inexistente_retorna_404(fake_database):
     response = client.get("/clientes/999")
 
