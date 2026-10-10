@@ -11,7 +11,7 @@ O projeto demonstra operações CRUD, integração com banco de dados, validaç�
 Este é um projeto de estudo de Back-End: centralizar um cadastro de clientes e oferecer operações consistentes para criar, consultar, atualizar e excluir registros.
 
 - **Solução:** API REST com FastAPI e persistência em MySQL.
-- **Validação:** Pydantic limita tamanho dos campos e faixa de idade; o e-mail recebe uma verificação básica de formato e é convertido para minúsculas.
+- **Validação:** Pydantic normaliza espaços nas extremidades do nome, limita tamanho dos campos e faixa de idade; `EmailStr` valida o formato do e-mail, que é convertido para minúsculas.
 - **Acesso a dados:** consultas SQL parametrizadas, com fechamento de cursor e conexão no fluxo normal das rotas.
 - **Comportamento HTTP:** criação retorna 201, registros inexistentes retornam 404 e entradas inválidas retornam 422.
 - **Qualidade:** testes do contrato HTTP e integração contínua com lint e cobertura mínima exigida de 80%.
@@ -28,7 +28,7 @@ A documentação interativa é gerada automaticamente pelo FastAPI com Swagger U
 
 - Criar, listar, consultar, atualizar e excluir clientes
 - Persistência de dados com MySQL
-- Limites de nome e idade e verificação básica de e-mail com Pydantic
+- Normalização de nome, validação do formato de e-mail e limites de idade com Pydantic
 - Credenciais protegidas por variáveis de ambiente
 - Consultas SQL parametrizadas
 - Respostas HTTP 404 e 422 para erros conhecidos
@@ -160,10 +160,9 @@ Uma criação bem-sucedida retorna HTTP 201 e o ID gerado pelo banco. Use esse I
 - Não há autenticação ou autorização; as operações de cadastro não devem ser expostas com dados reais sem controle de acesso.
 - A listagem retorna todos os clientes, sem paginação.
 - A rota `/` verifica apenas que a aplicação responde, não a disponibilidade do MySQL.
-- A verificação de e-mail ainda aceita alguns formatos inválidos, e o nome não é normalizado antes da validação.
 - Falhas de conexão ou SQL ainda não têm uma resposta padronizada de indisponibilidade; o fechamento da conexão também precisa cobrir falhas na criação do cursor.
 
-Prioridade sugerida: reforçar validação de entrada, tratar falhas de banco e testar a integração MySQL; depois evoluir paginação e controle de acesso. O registro completo está em [docs/REVISAO-TECNICA.md](docs/REVISAO-TECNICA.md).
+Prioridade sugerida: tratar falhas de banco e testar a integração MySQL; depois evoluir paginação e controle de acesso. O registro da revisão e da correção de validação está em [docs/REVISAO-TECNICA.md](docs/REVISAO-TECNICA.md).
 
 ## Estrutura
 

@@ -10,7 +10,7 @@ Revisão de 10/10/2026, vinculada à Issue #3. Foco: avaliar a implementação c
 - Documentação interativa pelo FastAPI.
 - Testes HTTP com banco simulado e pipeline de qualidade exigindo cobertura mínima de 80%.
 
-## Achados e ordem sugerida
+## Achados na versão revisada e ordem sugerida
 
 1. **Validação de entrada:** o nome usa apenas limites de tamanho. Dois espaços atendem ao mínimo de dois caracteres. O e-mail verifica a presença de `@` e de ponto no domínio, sem validar a parte local ou proibir espaços internos. Reforçar essas regras e adicionar testes específicos antes de anunciar validação completa.
 2. **Falhas do banco:** conexão e criação do cursor ocorrem antes do `try/finally`. Se o cursor falhar, o fechamento da conexão não é executado por esse bloco. Cobrir a aquisição e liberação dos recursos e definir respostas controladas para indisponibilidade, sem expor credenciais ou detalhes SQL ao cliente.
@@ -19,6 +19,12 @@ Revisão de 10/10/2026, vinculada à Issue #3. Foco: avaliar a implementação c
 5. **Uso público com dados reais:** definir autenticação, autorização e observabilidade antes de disponibilizar operações sobre cadastros reais.
 
 Não é necessário trocar a linguagem ou criar uma arquitetura extensa para resolver esses pontos. Mudanças pequenas, acompanhadas de testes dos comportamentos alterados, permitem explicar melhor as decisões.
+
+### Validação corrigida no PR #6
+
+O primeiro achado foi tratado: nomes têm espaços das extremidades removidos antes dos limites de tamanho e e-mails são validados com `EmailStr`, mantendo a normalização para minúsculas. Os testes cobrem POST e PUT e verificam que entradas inválidas retornam 422 sem abrir conexão com o banco. O formato válido não comprova a existência ou a propriedade do endereço.
+
+O pipeline da correção aprovou 34 testes e cobertura de 98,73%. Falhas do banco, integração MySQL, paginação e controle de acesso continuam como próximos passos.
 
 ## Verificação
 
