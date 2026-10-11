@@ -24,7 +24,13 @@ Não é necessário trocar a linguagem ou criar uma arquitetura extensa para res
 
 O primeiro achado foi tratado: nomes têm espaços das extremidades removidos antes dos limites de tamanho e e-mails são validados com `EmailStr`, mantendo a normalização para minúsculas. Os testes cobrem POST e PUT e verificam que entradas inválidas retornam 422 sem abrir conexão com o banco. O formato válido não comprova a existência ou a propriedade do endereço.
 
-O pipeline da correção aprovou 34 testes e cobertura de 98,73%. Falhas do banco, integração MySQL, paginação e controle de acesso continuam como próximos passos.
+O pipeline da correção aprovou 34 testes e cobertura de 98,73%.
+
+### Falhas do MySQL tratadas na Issue #7
+
+O segundo achado recebeu aquisição e liberação centralizadas dos recursos, HTTP 503 para erros operacionais/de comunicação e HTTP 500 genérico para outros erros MySQL. Falhas de escrita incluem tentativa de rollback; falhas MySQL de limpeza não ocultam a resposta original e não impedem a tentativa de fechar a conexão.
+
+Não há repetição automática de escritas. Testes simulam falhas de conexão, cursor, execução, leitura, commit, rollback e fechamento. A integração com MySQL real, paginação e controle de acesso continuam como próximos passos.
 
 ## Verificação
 

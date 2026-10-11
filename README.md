@@ -12,7 +12,7 @@ Este é um projeto de estudo de Back-End: centralizar um cadastro de clientes e 
 
 - **Solução:** API REST com FastAPI e persistência em MySQL.
 - **Validação:** Pydantic normaliza espaços nas extremidades do nome, limita tamanho dos campos e faixa de idade; `EmailStr` valida o formato do e-mail, que é convertido para minúsculas.
-- **Acesso a dados:** consultas SQL parametrizadas, com fechamento de cursor e conexão no fluxo normal das rotas.
+- **Acesso a dados:** consultas SQL parametrizadas, com aquisição e liberação centralizadas de cursor e conexão, incluindo caminhos de falha.
 - **Comportamento HTTP:** criação retorna 201, registros inexistentes retornam 404 e entradas inválidas retornam 422.
 - **Qualidade:** testes do contrato HTTP e integração contínua com lint e cobertura mínima exigida de 80%.
 
@@ -157,12 +157,19 @@ Uma criação bem-sucedida retorna HTTP 201 e o ID gerado pelo banco. Use esse I
 
 ## Limites atuais e próximos passos
 
+### Falhas do MySQL
+
+Erros operacionais ou de comunicação do conector retornam HTTP 503 com uma mensagem genérica de indisponibilidade. Outros erros MySQL retornam HTTP 500, sem expor consultas, credenciais ou mensagens internas. Respostas 404 e 422 continuam com seu comportamento anterior.
+
+Nas falhas de escrita, a aplicação tenta rollback. Cursor e conexão têm fechamento tentado independentemente; erros MySQL no rollback ou na limpeza são registrados sem substituir a resposta da operação. Uma falha de limpeza após um commit concluído não converte o sucesso em erro.
+
+Não há repetição automática de escritas. Se a conexão cair durante um commit, o resultado pode ser incerto mesmo com tentativa de rollback; confira o cadastro antes de reenviar a operação. Os testes simulam essas falhas, sem acessar um banco comercial.
+
 - Não há autenticação ou autorização; as operações de cadastro não devem ser expostas com dados reais sem controle de acesso.
 - A listagem retorna todos os clientes, sem paginação.
 - A rota `/` verifica apenas que a aplicação responde, não a disponibilidade do MySQL.
-- Falhas de conexão ou SQL ainda não têm uma resposta padronizada de indisponibilidade; o fechamento da conexão também precisa cobrir falhas na criação do cursor.
 
-Prioridade sugerida: tratar falhas de banco e testar a integração MySQL; depois evoluir paginação e controle de acesso. O registro da revisão e da correção de validação está em [docs/REVISAO-TECNICA.md](docs/REVISAO-TECNICA.md).
+Prioridade sugerida: testar a integração MySQL; depois evoluir paginação e controle de acesso. O registro da revisão e das correções está em [docs/REVISAO-TECNICA.md](docs/REVISAO-TECNICA.md).
 
 ## Estrutura
 
