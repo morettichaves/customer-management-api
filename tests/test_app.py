@@ -36,12 +36,16 @@ class FakeConnection:
     fake_cursor: FakeCursor
     committed: bool = False
     closed: bool = False
+    rolled_back: bool = False
 
     def cursor(self, dictionary: bool = False):
         return self.fake_cursor
 
     def commit(self):
         self.committed = True
+
+    def rollback(self):
+        self.rolled_back = True
 
     def close(self):
         self.closed = True
@@ -204,3 +208,138 @@ def test_exclusao_de_cliente_inexistente_retorna_404(fake_database):
     response = client.delete("/clientes/999")
 
     assert response.status_code == 404
+
+
+REQUISICOES = [
+    ("GET", "/clientes", None),
+    ("GET", "/clientes/1", None),
+    ("POST", "/clientes", {"nome": "Ana", "email": "ana@example.com", "idade": 28}),
+    ("PUT", "/clientes/1", {"nome": "Ana", "email": "ana@example.com", "idade": 28}),
+    ("DELETE", "/clientes/1", None),
+]
+
+
+def erro_operacional(*args, **kwargs):
+    raise app_module.mysql.connector.OperationalError("SQL e senha que não devem ser expostos")
+
+
+@pytest.mark.parametrize("metodo,rota,dados", REQUISICOES)
+def test_conexao_indisponivel_retorna_503(monkeypatch, caplog, metodo, rota, dados):
+    monkeypatch.setattr(app_module, "conectar_banco", erro_operacional)
+
+    response = client.request(metodo, rota, json=dados)
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "detail": "Banco de dados temporariamente indisponível. Tente novamente mais tarde."
+    }
+    assert "SQL e senha" not in caplog.text
+
+
+@pytest.mark.parametrize("metodo,rota,dados", REQUISICOES)
+def test_falha_na_criacao_do_cursor_fecha_conexao(
+    fake_database, monkeypatch, metodo, rota, dados
+):
+    cursor, connection = fake_database
+    monkeypatch.setattr(connection, "cursor", erro_operacional)
+
+    response = client.request(metodo, rota, json=dados)
+
+    assert response.status_code == 503
+    assert connection.closed
+    assert not cursor.closed
+
+
+@pytest.mark.parametrize("metodo,rota,dados", REQUISICOES)
+def test_falha_na_consulta_libera_recursos(fake_database, monkeypatch, metodo, rota, dados):
+    cursor, connection = fake_database
+    monkeypatch.setattr(cursor, "execute", erro_operacional)
+
+    response = client.request(metodo, rota, json=dados)
+
+    assert response.status_code == 503
+    assert cursor.closed and connection.closed
+    assert not connection.committed
+    assert connection.rolled_back == (metodo in {"POST", "PUT", "DELETE"})
+
+
+@pytest.mark.parametrize("metodo,rota,dados", REQUISICOES[2:])
+def test_falha_no_commit_tenta_rollback(fake_database, monkeypatch, metodo, rota, dados):
+    cursor, connection = fake_database
+    cursor.one = {"id": 1}
+    monkeypatch.setattr(connection, "commit", erro_operacional)
+
+    response = client.request(metodo, rota, json=dados)
+
+    assert response.status_code == 503
+    assert connection.rolled_back
+    assert cursor.closed and connection.closed
+
+
+@pytest.mark.parametrize("metodo,rota,dados,leitura", [
+    (*REQUISICOES[0], "fetchall"),
+    (*REQUISICOES[1], "fetchone"),
+    (*REQUISICOES[3], "fetchone"),
+])
+def test_falha_na_leitura_libera_recursos(
+    fake_database, monkeypatch, metodo, rota, dados, leitura
+):
+    cursor, connection = fake_database
+    monkeypatch.setattr(cursor, leitura, erro_operacional)
+
+    response = client.request(metodo, rota, json=dados)
+
+    assert response.status_code == 503
+    assert cursor.closed and connection.closed
+
+
+def test_falha_no_rollback_nao_oculta_erro_original(fake_database, monkeypatch):
+    cursor, connection = fake_database
+    monkeypatch.setattr(cursor, "execute", erro_operacional)
+    monkeypatch.setattr(connection, "rollback", erro_operacional)
+
+    response = client.post("/clientes", json=REQUISICOES[2][2])
+
+    assert response.status_code == 503
+    assert cursor.closed and connection.closed
+
+
+@pytest.mark.parametrize("falha_operacao", [False, True])
+@pytest.mark.parametrize("recurso", ["cursor", "connection"])
+def test_falha_no_fechamento_preserva_resposta(
+    fake_database, monkeypatch, falha_operacao, recurso
+):
+    cursor, connection = fake_database
+    alvo = cursor if recurso == "cursor" else connection
+
+    def fechar_com_erro():
+        alvo.closed = True
+        erro_operacional()
+
+    monkeypatch.setattr(alvo, "close", fechar_com_erro)
+    if falha_operacao:
+        monkeypatch.setattr(cursor, "execute", erro_operacional)
+
+    response = client.get("/clientes")
+
+    assert response.status_code == (503 if falha_operacao else 200)
+    assert cursor.closed and connection.closed
+
+
+@pytest.mark.parametrize("erro", [
+    app_module.mysql.connector.InterfaceError("Detalhe interno"),
+    app_module.mysql.connector.ProgrammingError("SQL interno"),
+])
+def test_erros_mysql_tem_resposta_generica(fake_database, monkeypatch, erro):
+    cursor, connection = fake_database
+
+    def falhar(*args):
+        raise erro
+
+    monkeypatch.setattr(cursor, "execute", falhar)
+    response = client.get("/clientes")
+
+    indisponivel = isinstance(erro, app_module.mysql.connector.InterfaceError)
+    assert response.status_code == (503 if indisponivel else 500)
+    assert "interno" not in response.text
+    assert cursor.closed and connection.closed
