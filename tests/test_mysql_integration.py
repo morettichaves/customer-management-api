@@ -74,3 +74,22 @@ def test_entrada_invalida_nao_persiste_no_mysql(mysql_client):
     )
     assert response.status_code == 422
     assert mysql_client.get("/clientes").json() == []
+
+
+def test_paginas_consecutivas_no_mysql(mysql_client):
+    ids = []
+    for number in range(23):
+        response = mysql_client.post("/clientes", json={
+            "nome": f"Cliente {number}", "email": f"cliente{number}@example.com", "idade": 25,
+        })
+        assert response.status_code == 201
+        ids.append(response.json()["id"])
+
+    first = mysql_client.get("/clientes")
+    second = mysql_client.get("/clientes", params={"limit": 20, "offset": 20})
+    assert first.status_code == second.status_code == 200
+    assert [row["id"] for row in first.json()] == ids[:20]
+    assert [row["id"] for row in second.json()] == ids[20:]
+    custom = mysql_client.get("/clientes", params={"limit": 1, "offset": 1})
+    assert [row["id"] for row in custom.json()] == ids[1:2]
+    assert mysql_client.get("/clientes", params={"offset": 23}).json() == []

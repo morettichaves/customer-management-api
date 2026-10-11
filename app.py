@@ -5,7 +5,7 @@ from typing import Annotated
 
 import mysql.connector
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, Query, status
 from pydantic import BaseModel, EmailStr, Field, StringConstraints, field_validator
 
 load_dotenv()
@@ -83,9 +83,12 @@ def home():
 
 
 @app.get("/clientes")
-def listar_clientes():
+def listar_clientes(
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+):
     with cursor_banco(dictionary=True) as (_, cursor):
-        cursor.execute("SELECT * FROM clientes")
+        cursor.execute("SELECT * FROM clientes ORDER BY id LIMIT %s OFFSET %s", (limit, offset))
         return cursor.fetchall()
 
 
