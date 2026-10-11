@@ -13,6 +13,7 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.fixture
 def mysql_client(monkeypatch):
+    monkeypatch.setenv("API_KEY", "integration-test-only")
     # Host e banco fixos impedem que .env direcione o teste a um banco comercial.
     def connect():
         return mysql.connector.connect(
@@ -33,7 +34,7 @@ def mysql_client(monkeypatch):
         )
         connection.commit()
         monkeypatch.setattr(app_module, "conectar_banco", connect)
-        with TestClient(app_module.app) as client:
+        with TestClient(app_module.app, headers={"X-API-Key": "integration-test-only"}) as client:
             yield client
     finally:
         try:

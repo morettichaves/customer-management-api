@@ -45,3 +45,7 @@ Este PR documenta o estado atual, inclui `.env.example` e torna a instalação e
 ### Integra??o e pagina??o
 
 O PR #10 adicionou testes contra um MySQL 8.4 tempor?rio no CI, validando persist?ncia do CRUD. A Issue #11 adiciona pagina??o por limit/offset, ordena??o por ID e valida??o antes da conex?o. Testes reais verificam p?ginas consecutivas e fim da listagem. Controle de acesso e pol?tica de duplicidade de e-mail continuam pendentes.
+
+### Controle de acesso na Issue #13
+
+As rotas de clientes recebem autentica??o por X-API-Key com segredo em API_KEY, compara??o por secrets.compare_digest e bloqueio quando a configura??o estiver ausente. A chave permite o CRUD completo. Login e permiss?es por usu?rio, auditoria, pol?tica de duplicidade e observabilidade de produ??o continuam fora desta etapa.
