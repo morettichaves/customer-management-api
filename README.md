@@ -139,7 +139,7 @@ pytest
 
 Cada Pull Request executa automaticamente lint, testes e geração do relatório de cobertura.
 
-Os testes atuais substituem o banco por `FakeConnection` e `FakeCursor`. Eles verificam respostas, comandos SQL e fechamento de recursos nos caminhos cobertos, sem criar clientes em um MySQL real. A cobertura alta não substitui um teste de integração com banco.
+Os testes unit?rios substituem o banco por `FakeConnection` e `FakeCursor`. Eles verificam respostas, comandos SQL e fechamento de recursos nos caminhos cobertos, sem criar clientes em um MySQL real. A cobertura alta não substitui um teste de integração com banco.
 
 ## Exemplo de uso
 
@@ -195,3 +195,11 @@ customer-management-api/
 
 - [GitHub](https://github.com/morettichaves)
 - [LinkedIn](https://www.linkedin.com/in/otavio-moretti)
+
+## Integração com MySQL isolado
+
+O GitHub Actions inicia um MySQL 8.4 temporário e executa os testes unitários e de integração. Os testes de integração validam o ciclo de cadastro, consulta, listagem, atualização e exclusão, incluindo normalização dos dados, atualização sem mudanças, respostas 404 e rejeição de entradas inválidas.
+
+O serviço usa exclusivamente o banco `customer_api_test`, usuário `integration` e host local do runner. A senha definida no workflow é descartável, exclusiva desse serviço de teste. Não são utilizados os dados de conexão do `.env` nem bancos de projetos publicados.
+
+Sem `MYSQL_INTEGRATION=1`, os testes de integração são ignorados e `pytest` executa os testes unitários normalmente. Não habilite a integração em um MySQL compartilhado: o teste recria e remove a tabela `clientes` no banco de teste. O serviço e os dados são descartados ao terminar o job.

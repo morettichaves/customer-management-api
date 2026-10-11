@@ -10,6 +10,22 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+          MYSQL_DATABASE: customer_api_test
+          MYSQL_USER: integration
+          MYSQL_PASSWORD: integration-test-only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,6 +43,9 @@ jobs:
         run: ruff check .
 
       - name: Test with coverage
+        env:
+          MYSQL_INTEGRATION: "1"
+          MYSQL_TEST_PASSWORD: integration-test-only
         run: pytest
 
       - name: Upload coverage report
