@@ -1,11 +1,13 @@
 import logging
 import os
+import secrets
 from contextlib import contextmanager
 from typing import Annotated
 
 import mysql.connector
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Query, status
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Security, status
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, EmailStr, Field, StringConstraints, field_validator
 
 load_dotenv()
@@ -16,6 +18,23 @@ app = FastAPI(
     description="API REST para gerenciamento de clientes.",
     version="1.1.0",
 )
+
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+def autenticar_chave(chave: Annotated[str | None, Security(api_key_header)]):
+    configurada = os.getenv("API_KEY")
+    if not configurada or not configurada.strip():
+        raise HTTPException(status_code=503, detail="Autenticação não configurada.")
+    if not chave or not secrets.compare_digest(chave.encode(), configurada.encode()):
+        raise HTTPException(
+            status_code=401,
+            detail="Chave de API ausente ou inválida.",
+            headers={"WWW-Authenticate": "APIKey"},
+        )
+
+
+clientes_router = APIRouter(dependencies=[Depends(autenticar_chave)])
 
 
 class Cliente(BaseModel):
@@ -82,7 +101,7 @@ def home():
     return {"message": "Customer Management API is running!"}
 
 
-@app.get("/clientes")
+@clientes_router.get("/clientes")
 def listar_clientes(
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
@@ -92,7 +111,7 @@ def listar_clientes(
         return cursor.fetchall()
 
 
-@app.get("/clientes/{cliente_id}")
+@clientes_router.get("/clientes/{cliente_id}")
 def buscar_cliente(cliente_id: int):
     with cursor_banco(dictionary=True) as (_, cursor):
         cursor.execute("SELECT * FROM clientes WHERE id = %s", (cliente_id,))
@@ -104,7 +123,7 @@ def buscar_cliente(cliente_id: int):
     return cliente
 
 
-@app.post("/clientes", status_code=status.HTTP_201_CREATED)
+@clientes_router.post("/clientes", status_code=status.HTTP_201_CREATED)
 def cadastrar_cliente(cliente: Cliente):
     with cursor_banco(escrita=True) as (conexao, cursor):
         cursor.execute(
@@ -121,7 +140,7 @@ def cadastrar_cliente(cliente: Cliente):
     }
 
 
-@app.put("/clientes/{cliente_id}")
+@clientes_router.put("/clientes/{cliente_id}")
 def atualizar_cliente(cliente_id: int, cliente: Cliente):
     with cursor_banco(dictionary=True, escrita=True) as (conexao, cursor):
         cursor.execute("SELECT * FROM clientes WHERE id = %s", (cliente_id,))
@@ -138,7 +157,7 @@ def atualizar_cliente(cliente_id: int, cliente: Cliente):
     return {"message": "Cliente atualizado com sucesso!", "id": cliente_id}
 
 
-@app.delete("/clientes/{cliente_id}")
+@clientes_router.delete("/clientes/{cliente_id}")
 def excluir_cliente(cliente_id: int):
     with cursor_banco(escrita=True) as (conexao, cursor):
         cursor.execute("DELETE FROM clientes WHERE id = %s", (cliente_id,))
@@ -149,3 +168,6 @@ def excluir_cliente(cliente_id: int):
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
 
     return {"message": "Cliente excluído com sucesso!"}
+
+
+app.include_router(clientes_router)

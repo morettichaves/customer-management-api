@@ -143,7 +143,7 @@ Os testes unit?rios substituem o banco por `FakeConnection` e `FakeCursor`. Eles
 
 ## Exemplo de uso
 
-Com MySQL configurado, tabela criada e servidor iniciado, envie no Swagger (`/docs`) um `POST /clientes` com:
+Com MySQL configurado, tabela criada e servidor iniciado, autorize no Swagger (`/docs`) usando a chave configurada em `API_KEY` e envie um `POST /clientes` com:
 
 ```json
 {
@@ -215,3 +215,23 @@ Sem `MYSQL_INTEGRATION=1`, os testes de integração são ignorados e `pytest` e
 - Uma p?gina sem registros retorna HTTP 200 com `[]`.
 
 O formato de resposta continua sendo uma lista. N?o h? total de registros ou metadados de navega??o. A ordena??o ? determin?stica, mas a pagina??o n?o mant?m uma fotografia do banco: altera??es entre consultas podem deslocar os resultados.
+
+## Autentica??o por chave de API
+
+Todas as rotas `/clientes` exigem o cabe?alho `X-API-Key`. Configure `API_KEY` no ambiente do servidor ou no `.env` local, que n?o deve ser versionado. N?o existe chave padr?o. Para gerar uma chave local:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+Guarde o resultado em `API_KEY` e mantenha a chave no servidor que consome a API. N?o coloque a chave em JavaScript p?blico, URLs ou reposit?rios. Use HTTPS nas conex?es publicadas. No Swagger, clique em **Authorize** e informe a chave para testar as rotas.
+
+- Chave ausente ou incorreta: HTTP 401 antes de acessar o banco.
+- `API_KEY` ausente, vazia ou composta s? de espa?os: HTTP 503; as rotas de clientes permanecem bloqueadas.
+- Chave correta: permite todas as opera??es de clientes. N?o h? diferencia??o entre leitura e escrita.
+- `/`, `/docs` e `/openapi.json` permanecem p?blicos, sem dados de clientes.
+- Para revogar a chave, substitua `API_KEY` no servidor, reinicie o processo e atualize os consumidores.
+
+Esta altera??o exige que consumidores existentes passem o cabe?alho em cada consulta. Os testes utilizam chaves fict?cias e verificam rejei??o em todas as rotas, al?m de executar os fluxos autorizados unit?rios e com MySQL isolado.
+
+Refer?ncia de implementa??o: [APIKeyHeader do FastAPI](https://fastapi.tiangolo.com/reference/security/#fastapi.security.APIKeyHeader).

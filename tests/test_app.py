@@ -6,7 +6,12 @@ from fastapi.testclient import TestClient
 
 import app as app_module
 
-client = TestClient(app_module.app)
+client = TestClient(app_module.app, headers={"X-API-Key": "unit-test-only"})
+
+
+@pytest.fixture(autouse=True)
+def configurar_chave_de_teste(monkeypatch):
+    monkeypatch.setenv("API_KEY", "unit-test-only")
 
 
 @dataclass
