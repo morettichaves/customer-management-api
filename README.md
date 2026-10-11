@@ -59,7 +59,7 @@ A documentação interativa é gerada automaticamente pelo FastAPI com Swagger U
 | Método | Endpoint | Descrição |
 |---|---|---|
 | GET | `/` | Verifica o estado da API |
-| GET | `/clientes` | Lista todos os clientes |
+| GET | `/clientes` | Lista clientes com pagina??o |
 | GET | `/clientes/{cliente_id}` | Busca um cliente |
 | POST | `/clientes` | Cria um cliente |
 | PUT | `/clientes/{cliente_id}` | Atualiza um cliente |
@@ -203,3 +203,15 @@ O GitHub Actions inicia um MySQL 8.4 temporário e executa os testes unitários 
 O serviço usa exclusivamente o banco `customer_api_test`, usuário `integration` e host local do runner. A senha definida no workflow é descartável, exclusiva desse serviço de teste. Não são utilizados os dados de conexão do `.env` nem bancos de projetos publicados.
 
 Sem `MYSQL_INTEGRATION=1`, os testes de integração são ignorados e `pytest` executa os testes unitários normalmente. Não habilite a integração em um MySQL compartilhado: o teste recria e remove a tabela `clientes` no banco de teste. O serviço e os dados são descartados ao terminar o job.
+
+## Pagina??o de clientes
+
+`GET /clientes` retorna uma lista com at? 20 clientes por padr?o, ordenada por ID crescente. Antes, a rota retornava todos os clientes: consumidores que precisam percorrer o cadastro completo devem agora consultar p?ginas sucessivas.
+
+- `limit`: quantidade m?xima por consulta, padr?o 20, entre 1 e 100.
+- `offset`: quantidade de registros a ignorar, padr?o 0, inteiro n?o negativo.
+- Exemplo: `GET /clientes?limit=20&offset=20` consulta a segunda p?gina.
+- Par?metros inv?lidos retornam 422 antes de acessar o banco.
+- Uma p?gina sem registros retorna HTTP 200 com `[]`.
+
+O formato de resposta continua sendo uma lista. N?o h? total de registros ou metadados de navega??o. A ordena??o ? determin?stica, mas a pagina??o n?o mant?m uma fotografia do banco: altera??es entre consultas podem deslocar os resultados.

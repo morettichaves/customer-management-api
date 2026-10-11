@@ -150,6 +150,32 @@ def test_busca_cliente_existente(fake_database):
     assert response.json()["id"] == 1
 
 
+@pytest.mark.parametrize(
+    "params,expected", [({}, (20, 0)), ({"limit": 100, "offset": 5}, (100, 5))]
+)
+def test_listagem_parametriza_paginacao(fake_database, params, expected):
+    cursor, connection = fake_database
+    response = client.get("/clientes", params=params)
+    assert response.status_code == 200
+    assert response.json() == []
+    assert cursor.statements == [
+        ("SELECT * FROM clientes ORDER BY id LIMIT %s OFFSET %s", expected)
+    ]
+    assert cursor.closed and connection.closed
+
+
+@pytest.mark.parametrize("params", [
+    {"limit": 0}, {"limit": -1}, {"limit": 101}, {"limit": "abc"},
+    {"offset": -1}, {"offset": "abc"}, {"limit": "1.5"}, {"offset": "0.5"},
+])
+def test_paginacao_invalida_nao_acessa_banco(monkeypatch, params):
+    def acesso_indevido():
+        pytest.fail("Paginação inválida não deve abrir conexão")
+
+    monkeypatch.setattr(app_module, "conectar_banco", acesso_indevido)
+    assert client.get("/clientes", params=params).status_code == 422
+
+
 def test_cadastro_persiste_cliente(fake_database):
     cursor, connection = fake_database
 

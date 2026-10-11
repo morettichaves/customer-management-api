@@ -41,3 +41,7 @@ Essa cobertura mede as linhas exercitadas; a função de conexão real está sub
 ## Escopo da entrega
 
 Este PR documenta o estado atual, inclui `.env.example` e torna a instalação e os limites mais claros. Não altera rotas, validações ou banco. As correções sugeridas devem ser implementadas em trabalhos próprios, com Issue, branch, testes e PR conforme `AGENTS.md`.
+
+### Integra??o e pagina??o
+
+O PR #10 adicionou testes contra um MySQL 8.4 tempor?rio no CI, validando persist?ncia do CRUD. A Issue #11 adiciona pagina??o por limit/offset, ordena??o por ID e valida??o antes da conex?o. Testes reais verificam p?ginas consecutivas e fim da listagem. Controle de acesso e pol?tica de duplicidade de e-mail continuam pendentes.
