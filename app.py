@@ -65,7 +65,9 @@ def cursor_banco(*, dictionary=False, escrita=False):
                 status_code=503,
                 detail="Banco de dados temporariamente indisponível. Tente novamente mais tarde.",
             ) from erro
-        raise HTTPException(status_code=500, detail="Não foi possível concluir a operação.") from erro
+        raise HTTPException(
+            status_code=500, detail="Não foi possível concluir a operação."
+        ) from erro
     finally:
         try:
             if cursor is not None:
